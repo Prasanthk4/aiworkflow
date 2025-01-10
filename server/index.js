@@ -7,24 +7,32 @@ const app = express();
 const port = process.env.PORT || 10000;
 
 // CORS configuration
-app.use(cors({
-  origin: 'https://aiworkflow-seven.vercel.app',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+const corsOptions = {
+  origin: ['https://aiworkflow-seven.vercel.app'],
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  credentials: false,
   optionsSuccessStatus: 200
-}));
+};
 
-// Pre-flight requests
-app.options('*', cors());
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', (req, res) => {
+  console.log('Received preflight request from:', req.headers.origin);
+  res.status(200).end();
+});
 
 app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  console.log('Headers:', req.headers);
-  if (req.body) console.log('Body:', JSON.stringify(req.body, null, 2));
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+  }
   next();
 });
 
@@ -34,8 +42,27 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
-    corsOrigin: 'https://aiworkflow-seven.vercel.app'
+    corsOrigin: corsOptions.origin
   });
+});
+
+// Test endpoint
+app.get('/api/test', async (req, res) => {
+  try {
+    res.status(200).json({
+      message: 'Backend is working!',
+      timestamp: new Date().toISOString(),
+      origin: req.headers.origin || 'No origin header',
+      environment: process.env.NODE_ENV,
+      corsSettings: {
+        allowedOrigins: corsOptions.origin,
+        methods: corsOptions.methods
+      }
+    });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
 });
 
 app.post('/api/llm/generate', async (req, res) => {
@@ -107,5 +134,5 @@ app.post('/api/llm/generate', async (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
-  console.log(`CORS origin: https://aiworkflow-seven.vercel.app`);
+  console.log(`CORS origin:`, corsOptions.origin);
 });

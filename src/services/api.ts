@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3002';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:3002';
 
 // Debug log for backend URL
-console.log('Backend URL:', BACKEND_URL);
+console.log('[API Config] Using backend URL:', BACKEND_URL);
 
 interface LLMRequest {
   model: string;
@@ -23,8 +23,38 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true
+  withCredentials: false // Changed to false since we don't need credentials
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(request => {
+  console.log('[API Request]', {
+    url: request.url,
+    method: request.method,
+    headers: request.headers,
+    data: request.data
+  });
+  return request;
+});
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  response => {
+    console.log('[API Response]', {
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
+  error => {
+    console.error('[API Error]', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    return Promise.reject(error);
+  }
+);
 
 export const generateLLMResponse = async ({
   model,
@@ -34,7 +64,6 @@ export const generateLLMResponse = async ({
   temperature = 0.7,
 }: LLMRequest): Promise<string> => {
   try {
-    console.log('Making request to:', `${BACKEND_URL}/api/llm/generate`);
     const { data } = await api.post<LLMResponse>('/api/llm/generate', {
       model,
       prompt,
@@ -49,14 +78,6 @@ export const generateLLMResponse = async ({
 
     return data.response;
   } catch (error: any) {
-    console.error('API Error:', {
-      error,
-      url: BACKEND_URL,
-      response: error.response?.data,
-      status: error.response?.status,
-      message: error.message
-    });
-
     if (error.response?.status === 401) {
       throw new Error('Invalid API key');
     }
@@ -66,5 +87,21 @@ export const generateLLMResponse = async ({
     }
 
     throw new Error('Failed to generate response. Please try again.');
+  }
+};
+
+// Add test function
+export const testBackendConnection = async () => {
+  try {
+    const response = await api.get('/api/test');
+    console.log('[Test Response]', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[Test Error]', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw new Error('Failed to connect to backend');
   }
 };
