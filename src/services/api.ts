@@ -23,7 +23,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false // Changed to false since we don't need credentials
+  withCredentials: false // CORS credentials not needed
 });
 
 // Add request interceptor for debugging
@@ -31,8 +31,8 @@ api.interceptors.request.use(request => {
   console.log('[API Request]', {
     url: request.url,
     method: request.method,
-    headers: request.headers,
-    data: request.data
+    baseURL: request.baseURL,
+    headers: request.headers
   });
   return request;
 });
@@ -42,7 +42,8 @@ api.interceptors.response.use(
   response => {
     console.log('[API Response]', {
       status: response.status,
-      data: response.data
+      data: response.data,
+      headers: response.headers
     });
     return response;
   },
@@ -50,7 +51,8 @@ api.interceptors.response.use(
     console.error('[API Error]', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
+      headers: error.response?.headers
     });
     return Promise.reject(error);
   }
@@ -72,12 +74,13 @@ export const generateLLMResponse = async ({
       temperature,
     });
 
-    if (!data || !data.response) {
-      throw new Error('Invalid response format from server');
-    }
-
     return data.response;
   } catch (error: any) {
+    console.error('[LLM Error]', {
+      error,
+      response: error.response?.data
+    });
+
     if (error.response?.status === 401) {
       throw new Error('Invalid API key');
     }
@@ -90,18 +93,17 @@ export const generateLLMResponse = async ({
   }
 };
 
-// Add test function
+// Test backend connection
 export const testBackendConnection = async () => {
   try {
-    const response = await api.get('/api/test');
-    console.log('[Test Response]', response.data);
-    return response.data;
+    const { data } = await api.get('/api/test');
+    console.log('[Backend Test]', data);
+    return data;
   } catch (error: any) {
-    console.error('[Test Error]', {
+    console.error('[Backend Test Error]', {
       message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
+      response: error.response?.data
     });
-    throw new Error('Failed to connect to backend');
+    throw error;
   }
 };
