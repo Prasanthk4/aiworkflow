@@ -134,7 +134,7 @@ const LLMNode = ({ id, data }: LLMNodeProps) => {
 
       // Make API request
       const response = await generateLLMResponse({
-        model: currentData.model || 'gpt-3.5-turbo',
+        model: currentData.model === 'deepseek' ? 'deepseek-chat' : currentData.model || 'gpt-3.5-turbo',
         prompt: inputText,
         apiKey: currentData.apiKey,
         maxTokens: parseInt(currentData.maxTokens),

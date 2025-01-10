@@ -66,8 +66,11 @@ app.post('/api/llm/generate', async (req, res) => {
       temperature: req.body.temperature
     });
 
+    // Use the correct model identifier for Deepseek
+    const modelName = req.body.model === 'deepseek' ? 'deepseek-chat' : req.body.model;
+
     const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
-      model: req.body.model,
+      model: modelName,
       messages: [{ role: 'user', content: req.body.prompt }],
       max_tokens: req.body.maxTokens,
       temperature: req.body.temperature,
