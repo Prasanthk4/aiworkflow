@@ -5,22 +5,44 @@ const axios = require('axios');
 
 const app = express();
 
-// CORS configuration
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://aiworkflow-seven.vercel.app', 'https://aiworkflow.vercel.app']
-    : ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true,
+// CORS configuration with more detailed settings
+app.use(cors({
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'https://aiworkflow-seven.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001'
+    ];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-};
+  credentials: true
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
 
-// Health check endpoint for Render
+// Debug endpoint to check CORS
+app.options('*', (req, res) => {
+  res.status(200).end();
+});
+
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', environment: process.env.NODE_ENV });
+  res.status(200).json({ 
+    status: 'healthy',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.post('/api/llm/generate', async (req, res) => {
@@ -80,5 +102,4 @@ const port = process.env.PORT || 3002;
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
-  console.log(`Allowed origins: ${JSON.stringify(corsOptions.origin)}`);
 });
