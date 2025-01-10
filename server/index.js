@@ -11,7 +11,8 @@ app.use(cors({
   origin: 'https://aiworkflow-seven.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 
 // Pre-flight requests
@@ -19,10 +20,12 @@ app.options('*', cors());
 
 app.use(express.json());
 
-// Debug endpoint to check CORS
-app.options('*', (req, res) => {
-  console.log('Received OPTIONS request from:', req.headers.origin);
-  res.status(200).end();
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  if (req.body) console.log('Body:', JSON.stringify(req.body, null, 2));
+  next();
 });
 
 // Health check endpoint
@@ -41,7 +44,8 @@ app.post('/api/llm/generate', async (req, res) => {
       model: req.body.model,
       prompt: req.body.prompt,
       maxTokens: req.body.maxTokens,
-      temperature: req.body.temperature
+      temperature: req.body.temperature,
+      hasApiKey: !!req.body.apiKey
     });
 
     const { model, prompt, apiKey, maxTokens = 1000, temperature = 0.7 } = req.body;
@@ -51,10 +55,10 @@ app.post('/api/llm/generate', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    let response;
     if (model === 'deepseek') {
+      console.log('Making request to Deepseek API...');
       const deepseekUrl = 'https://api.deepseek.com/v1/chat/completions';
-      response = await axios.post(
+      const response = await axios.post(
         deepseekUrl,
         {
           model: 'deepseek-chat',
@@ -69,7 +73,14 @@ app.post('/api/llm/generate', async (req, res) => {
           },
         }
       );
-      console.log('Deepseek response:', response.data);
+
+      console.log('Deepseek response status:', response.status);
+      console.log('Deepseek response:', JSON.stringify(response.data, null, 2));
+
+      if (!response.data?.choices?.[0]?.message?.content) {
+        throw new Error('Invalid response format from Deepseek API');
+      }
+
       return res.json({ response: response.data.choices[0].message.content });
     } else {
       return res.status(400).json({ error: 'Unsupported model' });
@@ -78,7 +89,8 @@ app.post('/api/llm/generate', async (req, res) => {
     console.error('LLM API Error:', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
+      stack: error.stack
     });
     
     if (error.response?.status === 401) {
