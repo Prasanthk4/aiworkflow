@@ -4,14 +4,18 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
+const port = process.env.PORT || 10000;
 
-// CORS configuration with correct domain
+// CORS configuration
 app.use(cors({
-  origin: ['https://aiworkflow-seven.vercel.app', 'http://localhost:3000'],
-  credentials: true,
+  origin: 'https://aiworkflow-seven.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
+// Pre-flight requests
+app.options('*', cors());
 
 app.use(express.json());
 
@@ -27,7 +31,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
-    allowedOrigins: ['https://aiworkflow-seven.vercel.app', 'http://localhost:3000']
+    corsOrigin: 'https://aiworkflow-seven.vercel.app'
   });
 });
 
@@ -88,9 +92,8 @@ app.post('/api/llm/generate', async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3002;
-
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`CORS origin: https://aiworkflow-seven.vercel.app`);
 });
