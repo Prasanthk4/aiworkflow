@@ -11,6 +11,7 @@
 8. [Deployment](#deployment)
 9. [Testing](#testing)
 10. [Troubleshooting](#troubleshooting)
+11. [Other Relevant Links](#other-relevant-links)
 
 ## Project Overview
 
@@ -657,4 +658,50 @@ const sanitizeError = (error: any): string => {
 };
 ```
 
-This documentation provides a comprehensive overview of the entire codebase, including implementation details, security considerations, and best practices. Each section includes actual code examples and explanations of key features.
+## Other Relevant Links
+
+### Official Documentation
+- [React Flow Documentation](https://reactflow.dev/docs/introduction/): Comprehensive guide for the workflow editor implementation
+- [Material-UI Components](https://mui.com/material-ui/getting-started/): UI component library documentation
+- [Express.js Guide](https://expressjs.com/en/guide/routing.html): Backend framework documentation
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html): TypeScript language reference
+
+### Development Tools
+- [Vercel Deployment Documentation](https://vercel.com/docs): Frontend deployment platform
+- [Render.com Documentation](https://render.com/docs): Backend deployment platform
+
+### Learning Resources
+- [React Flow Examples](https://reactflow.dev/docs/examples/overview/): Interactive examples for workflow implementation
+- [Material-UI Templates](https://mui.com/material-ui/getting-started/templates/): UI design templates and patterns
+- [Express.js Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html): Security guidelines
+- [TypeScript Deep Dive](https://basarat.gitbook.io/typescript/): In-depth TypeScript concepts
+
+### API References
+- [OpenAI API Documentation](https://platform.openai.com/docs/api-reference): GPT model integration
+- [Deepseek API Documentation](https://platform.deepseek.ai/docs): Deepseek model integration
+
+### Community Resources
+- [React Flow Discord](https://discord.com/invite/RVmnytFmGW): Community support for React Flow
+- [Material-UI Community](https://mui.com/material-ui/getting-started/support/): MUI support and discussions
+- [Express.js Discussions](https://github.com/expressjs/express/discussions): Express.js community forum
+
+### Security Resources
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/): Web application security risks
+- [Web Security Guidelines](https://infosec.mozilla.org/guidelines/web_security): Mozilla's security guidelines
+
+### Performance Optimization
+- [React Performance](https://react.dev/learn/render-and-commit): React optimization guide
+- [Express Performance Best Practices](https://expressjs.com/en/advanced/best-practice-performance.html): Backend optimization
+
+### Design Patterns
+- [React Patterns](https://reactpatterns.com/): Common React design patterns
+- [TypeScript Design Patterns](https://refactoring.guru/design-patterns/typescript): TypeScript implementation patterns
+
+### Testing Resources
+- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/): Frontend testing
+- [Jest Documentation](https://jestjs.io/docs/getting-started): Testing framework
+- [Supertest](https://github.com/visionmedia/supertest): Backend API testing
+
+### Monitoring and Analytics
+- [Vercel Analytics](https://vercel.com/docs/analytics): Frontend performance monitoring
+- [Express Prometheus](https://github.com/jochen-schweizer/express-prom-bundle): Backend metrics
