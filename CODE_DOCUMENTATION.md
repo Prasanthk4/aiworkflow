@@ -1,341 +1,660 @@
-# AI Workflow Builder - Code Documentation
+# AI Workflow Builder - Complete Source Code Documentation
 
 ## Table of Contents
-1. [Project Structure](#project-structure)
-2. [Frontend Components](#frontend-components)
-3. [Backend Services](#backend-services)
-4. [API Integration](#api-integration)
-5. [State Management](#state-management)
-6. [Deployment Configuration](#deployment-configuration)
+1. [Project Overview](#project-overview)
+2. [Technology Stack](#technology-stack)
+3. [Project Structure](#project-structure)
+4. [Frontend Implementation](#frontend-implementation)
+5. [Backend Implementation](#backend-implementation)
+6. [State Management](#state-management)
+7. [API Integration](#api-integration)
+8. [Deployment](#deployment)
+9. [Testing](#testing)
+10. [Troubleshooting](#troubleshooting)
+
+## Project Overview
+
+The AI Workflow Builder is a web application that enables users to create, manage, and execute AI workflows using a visual interface. It integrates with various Language Models (LLMs) and provides a chat interface for direct AI interaction.
+
+### Key Features
+- Visual workflow editor
+- Drag-and-drop node system
+- Real-time AI chat interface
+- Multiple LLM support
+- Workflow state persistence
+
+## Technology Stack
+
+### Frontend
+- React 18.2.0
+- TypeScript 4.9.5
+- React Flow 11.8.3
+- Material-UI 5.14.5
+- Axios 1.5.0
+
+### Backend
+- Node.js 18.x
+- Express 4.18.2
+- CORS 2.8.5
+- Axios for API calls
+
+### Development Tools
+- Vercel for frontend deployment
+- Render.com for backend hosting
+- Git for version control
+- ESLint for code quality
+- Prettier for code formatting
 
 ## Project Structure
 
 ```
 ai-workflow-builder/
-├── src/                    # Frontend source code
-│   ├── components/         # React components
-│   ├── context/           # React context providers
-│   ├── services/          # API and utility services
-│   └── types/             # TypeScript type definitions
-├── server/                # Backend source code
-│   ├── index.js          # Main server file
-│   └── routes/           # API routes
-├── public/               # Static assets
-└── config/               # Configuration files
+├── src/
+│   ├── components/           # React components
+│   │   ├── nodes/           # Workflow node components
+│   │   │   ├── LLMNode.tsx  # Language model node
+│   │   │   └── InputNode.tsx # Input node
+│   │   ├── ChatPage.tsx     # Chat interface
+│   │   ├── ChatButton.tsx   # Chat trigger button
+│   │   └── WorkflowEditor.tsx # Main editor
+│   ├── context/
+│   │   └── WorkflowContext.tsx # Global state management
+│   ├── services/
+│   │   ├── api.ts           # API service
+│   │   └── storage.ts       # Local storage service
+│   ├── types/
+│   │   └── workflow.ts      # TypeScript definitions
+│   ├── App.tsx              # Root component
+│   └── index.tsx            # Entry point
+├── server/
+│   ├── index.js             # Main server file
+│   └── routes/              # API routes
+├── public/                  # Static assets
+└── config/                  # Configuration files
 ```
 
-## Frontend Components
+## Frontend Implementation
 
-### 1. WorkflowEditor Component
+### 1. React Components
+
+#### 1.1 WorkflowEditor Component
 ```typescript
 // src/components/WorkflowEditor.tsx
-/**
- * Main workflow editor component using React Flow
- * Handles node creation, connection, and workflow state
- */
+
+import React, { useCallback } from 'react';
+import ReactFlow, { 
+  Node,
+  Edge,
+  Connection,
+  addEdge
+} from 'reactflow';
+
 interface WorkflowEditorProps {
   onSave: (workflow: Workflow) => void;
 }
+
+const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onSave }) => {
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+
+  // Handle node connections
+  const onConnect = useCallback((connection: Connection) => {
+    setEdges((eds) => addEdge(connection, eds));
+  }, []);
+
+  // Handle node updates
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  }, []);
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onConnect={onConnect}
+      nodeTypes={nodeTypes}
+    />
+  );
+};
 ```
 
 Key Features:
-- Drag-and-drop interface
-- Node connection management
-- Real-time workflow updates
-- Custom node types support
+- Real-time node updates
+- Edge connection management
+- Custom node type support
+- Drag-and-drop functionality
 
-### 2. Node Components
-
-#### LLMNode
+#### 1.2 LLM Node Component
 ```typescript
 // src/components/nodes/LLMNode.tsx
-/**
- * Language Model node for AI text generation
- * Configurable with different models and parameters
- */
+
 interface LLMNodeData {
   model: string;
   apiKey: string;
   maxTokens: number;
   temperature: number;
 }
+
+const LLMNode: React.FC<NodeProps<LLMNodeData>> = ({ data, isConnectable }) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    try {
+      setLoading(true);
+      const response = await generateLLMResponse({
+        model: data.model,
+        prompt: data.prompt,
+        apiKey: data.apiKey,
+        maxTokens: data.maxTokens,
+        temperature: data.temperature
+      });
+      // Handle response
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <NodeContainer>
+      <ModelSelector value={data.model} onChange={handleModelChange} />
+      <ParameterInputs
+        maxTokens={data.maxTokens}
+        temperature={data.temperature}
+        onUpdate={handleParameterUpdate}
+      />
+      <APIKeyInput value={data.apiKey} onChange={handleAPIKeyChange} />
+      <GenerateButton onClick={handleGenerate} loading={loading} />
+      {error && <ErrorMessage message={error} />}
+    </NodeContainer>
+  );
+};
 ```
 
 Features:
 - Model selection
 - Parameter configuration
 - API key management
-- Response handling
+- Loading states
+- Error handling
 
-#### InputNode
-```typescript
-// src/components/nodes/InputNode.tsx
-/**
- * Input node for user text entry
- * Supports multiple input types
- */
-interface InputNodeData {
-  type: 'text' | 'number' | 'select';
-  value: string;
-}
-```
-
-### 3. Chat Interface
-
-#### ChatPage
+#### 1.3 Chat Interface
 ```typescript
 // src/components/ChatPage.tsx
-/**
- * Main chat interface component
- * Handles message history and AI interactions
- */
+
 interface Message {
+  id: string;
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
 }
+
+const ChatPage: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage: Message = {
+      id: uuidv4(),
+      text: input,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const response = await generateLLMResponse({
+        model: 'deepseek-chat',
+        prompt: input,
+        apiKey: activeConfig.apiKey,
+        maxTokens: 1000,
+        temperature: 0.7
+      });
+
+      const aiMessage: Message = {
+        id: uuidv4(),
+        text: response,
+        sender: 'ai',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      // Handle error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ChatContainer>
+      <MessageList messages={messages} />
+      <InputArea
+        value={input}
+        onChange={setInput}
+        onSend={handleSend}
+        loading={loading}
+      />
+    </ChatContainer>
+  );
+};
 ```
 
 Features:
 - Real-time messaging
 - Message history
-- Error handling
 - Loading states
+- Error handling
+- Auto-scroll
+- Message persistence
 
-## Backend Services
+### 2. State Management
+
+#### 2.1 Workflow Context
+```typescript
+// src/context/WorkflowContext.tsx
+
+interface WorkflowState {
+  nodes: Node[];
+  edges: Edge[];
+  chatSessions: ChatSession[];
+  activeChatSession: string | null;
+  llmConfig: LLMConfig;
+}
+
+export const WorkflowContext = createContext<{
+  state: WorkflowState;
+  dispatch: React.Dispatch<WorkflowAction>;
+}>({
+  state: initialState,
+  dispatch: () => null
+});
+
+export const WorkflowProvider: React.FC = ({ children }) => {
+  const [state, dispatch] = useReducer(workflowReducer, initialState);
+
+  useEffect(() => {
+    // Load saved state from localStorage
+    const saved = localStorage.getItem('workflowState');
+    if (saved) {
+      dispatch({ type: 'LOAD_STATE', payload: JSON.parse(saved) });
+    }
+  }, []);
+
+  // Save state changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('workflowState', JSON.stringify(state));
+  }, [state]);
+
+  return (
+    <WorkflowContext.Provider value={{ state, dispatch }}>
+      {children}
+    </WorkflowContext.Provider>
+  );
+};
+```
+
+Features:
+- Global state management
+- State persistence
+- Action dispatching
+- Type safety
+
+## Backend Implementation
 
 ### 1. Express Server
 ```javascript
 // server/index.js
-/**
- * Main server configuration and middleware setup
- */
+
+const express = require('express');
+const cors = require('cors');
 const app = express();
+
+// CORS configuration
+const corsOptions = {
+  origin: ['https://aiworkflow-seven.vercel.app', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+};
+
 app.use(cors(corsOptions));
 app.use(express.json());
-```
 
-Key Middleware:
-- CORS handling
-- JSON parsing
-- Error handling
-- Request logging
+// Request logging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
 
-### 2. LLM Integration
-```javascript
-// server/routes/llm.js
-/**
- * LLM API route handler
- * Manages requests to AI models
- */
-router.post('/generate', async (req, res) => {
-  const { model, prompt, apiKey } = req.body;
-  // Model-specific handling
+// Error handling
+app.use((error, req, res, next) => {
+  console.error('Server Error:', error);
+  res.status(500).json({
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : error.message
+  });
+});
+
+// LLM endpoint
+app.post('/api/llm/generate', async (req, res) => {
+  try {
+    const { model, prompt, apiKey, maxTokens, temperature } = req.body;
+
+    const response = await axios.post(
+      'https://api.deepseek.com/v1/chat/completions',
+      {
+        model: model === 'deepseek' ? 'deepseek-chat' : model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+        temperature
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.json({ response: response.data.choices[0].message.content });
+  } catch (error) {
+    console.error('LLM Error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to generate response'
+    });
+  }
 });
 ```
 
 Features:
-- Multiple model support
+- CORS handling
+- Request logging
 - Error handling
+- LLM integration
 - Response formatting
-- Rate limiting
 
 ## API Integration
 
 ### 1. API Service
 ```typescript
 // src/services/api.ts
-/**
- * Centralized API service for frontend
- * Handles all backend communication
- */
-export const api = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL,
+
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://ai-workflow-backend.onrender.com';
+
+const api = axios.create({
+  baseURL: BACKEND_URL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
-```
 
-Key Methods:
-- `generateLLMResponse`: AI text generation
-- `testConnection`: Backend health check
-- Error interceptors
-- Request logging
+// Request interceptor
+api.interceptors.request.use(
+  config => {
+    console.log('[API Request]', {
+      url: config.url,
+      method: config.method,
+      data: config.data
+    });
+    return config;
+  },
+  error => {
+    console.error('[API Request Error]', error);
+    return Promise.reject(error);
+  }
+);
 
-## State Management
+// Response interceptor
+api.interceptors.response.use(
+  response => {
+    console.log('[API Response]', {
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
+  error => {
+    console.error('[API Response Error]', {
+      message: error.message,
+      response: error.response?.data
+    });
+    return Promise.reject(error);
+  }
+);
 
-### 1. Workflow Context
-```typescript
-// src/context/WorkflowContext.tsx
-/**
- * Global state management for workflow data
- * Provides workflow operations to all components
- */
-interface WorkflowContextType {
-  nodes: Node[];
-  edges: Edge[];
-  chatSessions: ChatSession[];
-  activeChatSession: string | null;
-}
-```
-
-Features:
-- Workflow state management
-- Chat session handling
-- Node/edge operations
-- Global configuration
-
-### 2. Local Storage Integration
-```typescript
-// src/services/storage.ts
-/**
- * Local storage service for persistence
- * Handles saving and loading workflow state
- */
-export const saveWorkflow = (workflow: Workflow) => {
-  localStorage.setItem('workflow', JSON.stringify(workflow));
+export const generateLLMResponse = async ({
+  model,
+  prompt,
+  apiKey,
+  maxTokens = 1000,
+  temperature = 0.7
+}: LLMRequest): Promise<string> => {
+  try {
+    const { data } = await api.post('/api/llm/generate', {
+      model,
+      prompt,
+      apiKey,
+      maxTokens,
+      temperature
+    });
+    return data.response;
+  } catch (error) {
+    console.error('[LLM Error]', error);
+    throw new Error(
+      error.response?.data?.error || 'Failed to generate response'
+    );
+  }
 };
 ```
 
-## Deployment Configuration
+Features:
+- Centralized API configuration
+- Request/response interceptors
+- Error handling
+- Type safety
+- Logging
+
+## Deployment
 
 ### 1. Vercel Configuration
 ```json
 // vercel.json
+
 {
   "version": 2,
   "builds": [
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
     }
   ]
 }
 ```
 
-Features:
-- Static file serving
-- Build configuration
-- Route handling
-
-### 2. Environment Configuration
+### 2. Environment Variables
 ```typescript
-// src/config/environment.ts
-/**
- * Environment configuration management
- * Handles different deployment environments
- */
-export const config = {
-  backendUrl: process.env.REACT_APP_BACKEND_URL,
-  environment: process.env.NODE_ENV
-};
+// .env.production
+REACT_APP_BACKEND_URL=https://ai-workflow-backend.onrender.com
+
+// .env.development
+REACT_APP_BACKEND_URL=http://localhost:3002
 ```
 
-## Code Examples
+## Testing
 
-### 1. Creating a New Node
+### 1. Component Tests
 ```typescript
-const handleAddNode = (type: string) => {
-  const newNode = {
-    id: `node-${Date.now()}`,
-    type,
-    position: { x: 100, y: 100 },
-    data: { label: `New ${type} Node` }
-  };
-  setNodes((nodes) => [...nodes, newNode]);
-};
+// src/__tests__/LLMNode.test.tsx
+
+import { render, fireEvent, waitFor } from '@testing-library/react';
+import LLMNode from '../components/nodes/LLMNode';
+
+describe('LLMNode', () => {
+  it('should render configuration options', () => {
+    const { getByLabelText } = render(<LLMNode data={mockData} />);
+    expect(getByLabelText('Model')).toBeInTheDocument();
+    expect(getByLabelText('API Key')).toBeInTheDocument();
+  });
+
+  it('should handle generation', async () => {
+    const { getByText } = render(<LLMNode data={mockData} />);
+    fireEvent.click(getByText('Generate'));
+    await waitFor(() => {
+      expect(getByText('Response:')).toBeInTheDocument();
+    });
+  });
+});
 ```
 
-### 2. Handling LLM Responses
+### 2. API Tests
 ```typescript
-const generateResponse = async (prompt: string) => {
-  try {
+// src/__tests__/api.test.ts
+
+describe('API Service', () => {
+  it('should handle LLM generation', async () => {
     const response = await generateLLMResponse({
       model: 'deepseek-chat',
-      prompt,
-      apiKey,
-      maxTokens: 1000,
-      temperature: 0.7
+      prompt: 'Test prompt',
+      apiKey: 'test-key'
     });
-    return response;
-  } catch (error) {
-    console.error('LLM Error:', error);
-    throw error;
+    expect(response).toBeDefined();
+  });
+
+  it('should handle errors', async () => {
+    await expect(
+      generateLLMResponse({
+        model: 'invalid-model',
+        prompt: 'Test',
+        apiKey: 'invalid-key'
+      })
+    ).rejects.toThrow();
+  });
+});
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+1. **API Connection Errors**
+   ```typescript
+   // Check environment variables
+   console.log('Backend URL:', process.env.REACT_APP_BACKEND_URL);
+   
+   // Verify CORS settings
+   console.log('Origin:', window.location.origin);
+   
+   // Test API connection
+   const testConnection = async () => {
+     try {
+       await api.get('/health');
+       console.log('Backend connected');
+     } catch (error) {
+       console.error('Connection failed:', error);
+     }
+   };
+   ```
+
+2. **State Management Issues**
+   ```typescript
+   // Debug context values
+   const { state, dispatch } = useWorkflow();
+   console.log('Current state:', state);
+   
+   // Track state updates
+   useEffect(() => {
+     console.log('State updated:', state);
+   }, [state]);
+   ```
+
+3. **Performance Optimization**
+   ```typescript
+   // Memoize expensive computations
+   const memoizedValue = useMemo(() => {
+     return expensiveCalculation(props.value);
+   }, [props.value]);
+   
+   // Prevent unnecessary re-renders
+   const MemoizedComponent = React.memo(({ value }) => {
+     return <div>{value}</div>;
+   });
+   ```
+
+### Error Logging
+
+```typescript
+// src/services/logger.ts
+
+export const logger = {
+  error: (message: string, error: any) => {
+    console.error(`[${new Date().toISOString()}] Error:`, message, error);
+    // Send to error tracking service
+  },
+  info: (message: string, data?: any) => {
+    console.log(`[${new Date().toISOString()}] Info:`, message, data);
   }
 };
 ```
 
-### 3. Chat Session Management
+## Security Considerations
+
+### 1. API Key Handling
 ```typescript
-const createNewChatSession = () => {
-  const newSession = {
-    id: uuidv4(),
-    messages: [],
-    createdAt: new Date()
-  };
-  setChatSessions([...chatSessions, newSession]);
-  setActiveChatSession(newSession.id);
+// Never store API keys in code
+const apiKey = process.env.REACT_APP_API_KEY;
+
+// Use secure headers
+const headers = {
+  'Authorization': `Bearer ${apiKey}`,
+  'Content-Type': 'application/json'
 };
 ```
 
-## Best Practices
-
-### 1. Error Handling
-- Consistent error structure
-- User-friendly error messages
-- Detailed error logging
-- Graceful fallbacks
-
-### 2. Performance Optimization
-- React.memo for expensive components
-- Debounced API calls
-- Efficient re-rendering
-- Code splitting
-
-### 3. Security
-- API key validation
-- Input sanitization
-- CORS configuration
-- Error message sanitization
-
-## Testing
-
-### 1. Component Testing
+### 2. Input Validation
 ```typescript
-// src/__tests__/LLMNode.test.tsx
-describe('LLMNode', () => {
-  it('should render configuration options', () => {
-    // Test implementation
-  });
-});
+const validateInput = (input: string): boolean => {
+  // Remove potentially harmful characters
+  const sanitized = input.replace(/[<>]/g, '');
+  return input === sanitized;
+};
 ```
 
-### 2. API Testing
+### 3. Error Message Sanitization
 ```typescript
-// src/__tests__/api.test.ts
-describe('API Service', () => {
-  it('should handle LLM generation', async () => {
-    // Test implementation
-  });
-});
+const sanitizeError = (error: any): string => {
+  // Remove sensitive information
+  return process.env.NODE_ENV === 'production'
+    ? 'An error occurred'
+    : error.message;
+};
 ```
 
-## Troubleshooting Guide
-
-### Common Issues
-1. **API Connection Errors**
-   - Check backend URL configuration
-   - Verify API key validity
-   - Check CORS settings
-
-2. **Node Connection Issues**
-   - Verify node compatibility
-   - Check connection validation rules
-   - Review edge constraints
-
-3. **State Management Problems**
-   - Check context provider wrapping
-   - Verify state updates
-   - Review component re-renders
+This documentation provides a comprehensive overview of the entire codebase, including implementation details, security considerations, and best practices. Each section includes actual code examples and explanations of key features.
