@@ -8,7 +8,7 @@ const port = process.env.PORT || 10000;
 
 // CORS configuration
 const corsOptions = {
-  origin: ['https://aiworkflow-seven.vercel.app'],
+  origin: ['https://aiworkflow-seven.vercel.app', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false,
@@ -19,10 +19,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle preflight requests
-app.options('*', (req, res) => {
-  console.log('Received preflight request from:', req.headers.origin);
-  res.status(200).end();
-});
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 

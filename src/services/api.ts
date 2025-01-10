@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:3002';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://ai-workflow-backend.onrender.com';
 
 // Debug log for backend URL
 console.log('[API Config] Using backend URL:', BACKEND_URL);

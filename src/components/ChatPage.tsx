@@ -24,6 +24,7 @@ import ChatIcon from '@mui/icons-material/Chat';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useWorkflow } from '../context/WorkflowContext';
 import { styled } from '@mui/material/styles';
+import { generateLLMResponse } from '../services/api';
 
 interface Message {
   text: string;
@@ -201,33 +202,16 @@ const ChatPage = () => {
       setIsLoading(true);
 
       try {
-        const response = await fetch('http://localhost:3002/api/llm/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: activeLLMConfig.model,
-            prompt: inputMessage,
-            apiKey: activeLLMConfig.apiKey,
-            maxTokens: activeLLMConfig.maxTokens,
-            temperature: activeLLMConfig.temperature,
-            history: messages.map(msg => ({
-              role: msg.sender === 'user' ? 'user' : 'assistant',
-              content: msg.text
-            }))
-          }),
+        const response = await generateLLMResponse({
+          model: activeLLMConfig.model === 'deepseek' ? 'deepseek-chat' : activeLLMConfig.model,
+          prompt: inputMessage,
+          apiKey: activeLLMConfig.apiKey,
+          maxTokens: activeLLMConfig.maxTokens || 1000,
+          temperature: activeLLMConfig.temperature || 0.7,
         });
-
-        if (!response.ok) {
-          const errorData = await response.text();
-          throw new Error(`API error: ${errorData}`);
-        }
-
-        const data = await response.json();
         
         const aiMessage = {
-          text: data.response || 'No response received',
+          text: response || 'No response received',
           sender: 'ai' as const,
           timestamp: new Date()
         };
