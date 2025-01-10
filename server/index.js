@@ -5,34 +5,19 @@ const axios = require('axios');
 
 const app = express();
 
-// CORS configuration with more detailed settings
+// CORS configuration with correct domain
 app.use(cors({
-  origin: function(origin, callback) {
-    const allowedOrigins = [
-      'https://aiworkflow-seven.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:3001'
-    ];
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: ['https://aiworkflow-seven.vercel.app', 'http://localhost:3000'],
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
 
 // Debug endpoint to check CORS
 app.options('*', (req, res) => {
+  console.log('Received OPTIONS request from:', req.headers.origin);
   res.status(200).end();
 });
 
@@ -41,56 +26,62 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy',
     environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    allowedOrigins: ['https://aiworkflow-seven.vercel.app', 'http://localhost:3000']
   });
 });
 
 app.post('/api/llm/generate', async (req, res) => {
   try {
+    console.log('Received LLM request:', {
+      model: req.body.model,
+      prompt: req.body.prompt,
+      maxTokens: req.body.maxTokens,
+      temperature: req.body.temperature
+    });
+
     const { model, prompt, apiKey, maxTokens = 1000, temperature = 0.7 } = req.body;
 
     if (!model || !prompt || !apiKey) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+      console.error('Missing required fields:', { model, prompt, hasApiKey: !!apiKey });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    let apiEndpoint;
-    let headers;
-    let data;
-
-    if (model.toLowerCase().includes('deepseek')) {
-      apiEndpoint = 'https://api.deepseek.com/v1/chat/completions';
-      headers = {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      };
-      data = {
-        model: 'deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-        temperature: temperature,
-      };
+    let response;
+    if (model === 'deepseek') {
+      const deepseekUrl = 'https://api.deepseek.com/v1/chat/completions';
+      response = await axios.post(
+        deepseekUrl,
+        {
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          temperature: temperature,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      console.log('Deepseek response:', response.data);
+      return res.json({ response: response.data.choices[0].message.content });
     } else {
-      // Default to OpenAI
-      apiEndpoint = 'https://api.openai.com/v1/chat/completions';
-      headers = {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      };
-      data = {
-        model: model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-        temperature: temperature,
-      };
+      return res.status(400).json({ error: 'Unsupported model' });
     }
-
-    const response = await axios.post(apiEndpoint, data, { headers });
-    const completion = response.data.choices[0]?.message?.content || response.data.choices[0]?.text;
-
-    res.json({ response: completion });
   } catch (error) {
-    console.error('LLM API Error:', error.response?.data || error.message);
-    res.status(500).json({ 
+    console.error('LLM API Error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
+    if (error.response?.status === 401) {
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+    
+    return res.status(500).json({ 
       error: 'Failed to generate response',
       details: error.response?.data || error.message
     });
